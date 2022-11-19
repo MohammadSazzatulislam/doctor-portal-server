@@ -1,9 +1,9 @@
 const express = require("express");
 const app = express();
-const jwt = require("jsonwebtoken");
 const cors = require("cors");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const port = process.env.PORT || 5000;
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 app.use(cors());
@@ -17,7 +17,7 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
-function veryJwt(req, res, next) {
+function  veryJwt (req, res, next)  {
   const authHeader = req.headers.authorization;
   if (!authHeader) {
     return res.status(401).send({ message: "Unauthorization Access" });
@@ -26,11 +26,12 @@ function veryJwt(req, res, next) {
     if (err) {
       return res.status(403).send({ message: "forbidden Access" });
     }
-    req.decoded = decoded;
+    req.decoded = decoded
     next();
   });
   
 }
+
 
 async function run() {
   try {
@@ -43,6 +44,7 @@ async function run() {
       .collection("bookings");
 
     const usersCollection = client.db("doctorsPortal").collection("users");
+    const doctorsCollection = client.db("doctorsPortal").collection("doctors");
 
     app.get("/", (req, res) => {
       res.send("appi is comming soon");
@@ -71,14 +73,9 @@ async function run() {
       res.send(options);
     });
 
-    app.get("/bookings", veryJwt, async (req, res) => {
+    app.get("/bookings",  async (req, res) => {
       const email = req.query.email;
-      // const decodedEmail = req.decoded.email;
-
-      // if (email !== decodedEmail) {
-      //   return res.status(403).send({ message: "forbidden access" });
-      // }
-      const query = {  email : email };
+      const query = {  email: email };
       const result = await bookingsCollection.find(query).toArray();
       res.send(result);
     });
@@ -97,7 +94,6 @@ async function run() {
           message: `you already have a booking on  ${booking.date}`,
         });
       }
-
       const result = await bookingsCollection.insertOne(booking);
       res.send(result);
     });
@@ -119,23 +115,22 @@ async function run() {
       
       const decodedEmail = req.decoded.email
       const query = { decodedEmail };
-
       const user = await usersCollection.findOne(query);
-      if (user?.role !== "Admin") {
+      if (user?.role !== "admin") {
         return res.status(403).send({ message: "forbidden access" });
       }
 
-      const allUsers = await usersCollection.find(query).toArray();
+      const filter = {};
+      const allUsers = await usersCollection.find(filter).toArray();
       res.send(allUsers);
     });
 
     app.put('/allUsers/admin/:id',veryJwt, async (req, res) => {
 
       const decodedEmail = req.decoded.email
-      const query = { email: decodedEmail }
-      
+      const query = { decodedEmail }      
       const user = await usersCollection.findOne(query)
-      if (user?.role !== 'Admin') {
+      if (user?.role !== 'admin') {
         return res.status(403).send({message: 'forbidden access'})
       }
 
@@ -144,7 +139,7 @@ async function run() {
       const option = { upsert: true }
       const updateDoc = {
         $set:{
-          role : 'Admin'
+          role : 'admin'
         }
       }
       const result = await usersCollection.updateOne(filter, updateDoc, option)
@@ -163,8 +158,27 @@ async function run() {
       const email = req.params.email;
       const query = { email }
       const user = await usersCollection.findOne(query)
-      res.send({isAdmin : user?.role === 'Admin' })
+      res.send({isAdmin : user?.role === 'admin' })
     })
+
+
+    app.get('/appointmentSpecialty', async(req, res)=>{
+      const query = {}
+      const result = await appointmentCollection.find(query).project({name:1}).toArray()
+      res.send(result)
+    })
+
+    app.post('/doctors', async(req, res)=>{
+      const doctor = req.body;
+      const result = await doctorsCollection.insertOne(doctor)
+      res.send(result)
+    })
+
+    app.get("/doctors", async (req, res) => {
+      const query = {};
+      const doctor = await doctorsCollection.find(query).toArray();
+      res.send(doctor);
+    });
 
 
 
